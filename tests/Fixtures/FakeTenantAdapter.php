@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace PuyuPe\SiproInternalApiLaravel\Tests\Fixtures;
 
-use PuyuPe\SiproInternalApiCore\Dto\ActivateTenantRequest;
-use PuyuPe\SiproInternalApiCore\Dto\CreateTenantRequest;
-use PuyuPe\SiproInternalApiCore\Dto\SuspendTenantRequest;
-use PuyuPe\SiproInternalApiCore\Dto\WarnTenantRequest;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ActivateTenantRequest;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\CreateTenantRequest;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\SuspendTenantRequest;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\WarnTenantRequest;
 use PuyuPe\SiproInternalApiLaravel\Contracts\TenantAdapterInterface;
 
 class FakeTenantAdapter implements TenantAdapterInterface

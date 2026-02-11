@@ -7,10 +7,10 @@ namespace PuyuPe\SiproInternalApiLaravel\Http\Controllers;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use PuyuPe\SiproInternalApiCore\Dto\ActivateTenantRequest;
-use PuyuPe\SiproInternalApiCore\Dto\CreateTenantRequest;
-use PuyuPe\SiproInternalApiCore\Dto\SuspendTenantRequest;
-use PuyuPe\SiproInternalApiCore\Dto\WarnTenantRequest;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ActivateTenantRequest;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\CreateTenantRequest;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\SuspendTenantRequest;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\WarnTenantRequest;
 use PuyuPe\SiproInternalApiCore\Errors\ErrorCode;
 use PuyuPe\SiproInternalApiCore\Errors\ErrorFactory;
 use PuyuPe\SiproInternalApiCore\Errors\InternalApiError;
@@ -124,17 +124,21 @@ class InternalV1Controller
             /** @var array<string,mixed> $payload */
             $payload = $request->json()->all();
             $dto = $dtoClass::fromArray($payload);
-            $dto->validate();
+            $validation = $dto->validate();
+
+            if (method_exists($validation, 'ok') && $validation->ok() === false) {
+                $validationError = ErrorFactory::validationError($validation);
+
+                return response()->json(ErrorResponse::fromError($validationError)->toArray(), 400);
+            }
 
             return $dto;
         } catch (InternalApiError $error) {
-            $validationError = ErrorFactory::validationError($error->message, $this->extractDetails($error));
-
-            return response()->json(ErrorResponse::fromError($validationError)->toArray(), 400);
+            return response()->json(ErrorResponse::fromError($error)->toArray(), 400);
         } catch (Throwable) {
-            $validationError = ErrorFactory::validationError('Invalid request payload.');
+            $fallbackError = new InternalApiError(ErrorCode::VALIDATION_ERROR, 'Invalid request payload.');
 
-            return response()->json(ErrorResponse::fromError($validationError)->toArray(), 400);
+            return response()->json(ErrorResponse::fromError($fallbackError)->toArray(), 400);
         }
     }
 
@@ -173,26 +177,6 @@ class InternalV1Controller
         return response()->json(ErrorResponse::fromError($error)->toArray(), 500);
     }
 
-    /**
-     * @return array<string,mixed>|null
-     */
-    private function extractDetails(InternalApiError $error): ?array
-    {
-        if (property_exists($error, 'details')) {
-            /** @var mixed $details */
-            $details = $error->details;
-
-            return is_array($details) ? $details : null;
-        }
-
-        if (method_exists($error, 'getDetails')) {
-            $details = $error->getDetails();
-
-            return is_array($details) ? $details : null;
-        }
-
-        return null;
-    }
 
     private function extractErrorCode(InternalApiError $error): ErrorCode
     {

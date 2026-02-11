@@ -8,8 +8,6 @@ use PuyuPe\SiproInternalApiCore\Http\InternalHeaders;
 use PuyuPe\SiproInternalApiCore\Security\Hmac\HmacSigner;
 use PuyuPe\SiproInternalApiLaravel\Tests\Fixtures\FakeTenantAdapter;
 use PuyuPe\SiproInternalApiLaravel\Tests\TestCase;
-use ReflectionMethod;
-use RuntimeException;
 
 class InternalV1EndpointsTest extends TestCase
 {
@@ -35,6 +33,7 @@ class InternalV1EndpointsTest extends TestCase
         $headers = [
             InternalHeaders::KEY_ID => $this->keyId,
             InternalHeaders::TIMESTAMP => (string) time(),
+            InternalHeaders::NONCE => 'invalid-signature-nonce',
             InternalHeaders::SIGNATURE => 'invalid-signature',
         ];
 
@@ -48,8 +47,8 @@ class InternalV1EndpointsTest extends TestCase
     {
         FakeTenantAdapter::$lastCreateTenantRequest = null;
 
-        $tenantUuid = 'tenant-valid-signature';
-        $rawBody = sprintf('{"tenant_uuid":"%s"}', $tenantUuid);
+        $tenantUuid = '11111111-1111-4111-8111-111111111111';
+        $rawBody = $this->validCreateTenantRawBody($tenantUuid);
         $headers = $this->signedHeaders('POST', '/internal/v1/tenants', $rawBody, (string) time(), 'nonce-ok-1');
 
         $response = $this->callRaw('POST', '/internal/v1/tenants', $rawBody, $headers);
@@ -67,7 +66,7 @@ class InternalV1EndpointsTest extends TestCase
     {
         config()->set('sipro-internal-api-laravel.hmac.nonce.enabled', true);
 
-        $rawBody = '{"tenant_uuid":"tenant-nonce-replay"}';
+        $rawBody = $this->validCreateTenantRawBody('22222222-2222-4222-8222-222222222222');
         $timestamp = (string) time();
         $nonce = 'same-nonce';
 
@@ -111,57 +110,34 @@ class InternalV1EndpointsTest extends TestCase
         /** @var HmacSigner $signer */
         $signer = $this->app->make(HmacSigner::class);
 
-        $headers = [
-            InternalHeaders::KEY_ID => $this->keyId,
-            InternalHeaders::TIMESTAMP => $timestamp,
-            InternalHeaders::NONCE => $nonce,
-        ];
+        return $signer->buildSignedHeaders(
+            $method,
+            $path,
+            $rawBody,
+            $this->keyId,
+            $this->secret,
+            $timestamp,
+            $nonce,
+        );
+    }
 
-        $parameters = (new ReflectionMethod($signer, 'sign'))->getParameters();
-        $args = [];
 
-        foreach ($parameters as $parameter) {
-            $name = $parameter->getName();
-
-            $args[] = match ($name) {
-                'method', 'httpMethod' => $method,
-                'path', 'uriPath' => $path,
-                'headers', 'headerMap' => $headers,
-                'body', 'rawBody' => $rawBody,
-                'keyId' => $this->keyId,
-                'secret', 'secretKey', 'keySecret' => $this->secret,
-                'timestamp' => $timestamp,
-                'nonce' => $nonce,
-                default => $parameter->isDefaultValueAvailable()
-                    ? $parameter->getDefaultValue()
-                    : throw new RuntimeException('Unsupported HmacSigner::sign argument: ' . $name),
-            };
-        }
-
-        $result = $signer->sign(...$args);
-
-        if (is_string($result)) {
-            return $headers + [InternalHeaders::SIGNATURE => $result];
-        }
-
-        if (is_array($result)) {
-            $normalized = [];
-            foreach ($result as $key => $value) {
-                if (is_string($key) && is_scalar($value)) {
-                    $normalized[$key] = (string) $value;
-                }
-            }
-
-            if (isset($normalized[InternalHeaders::SIGNATURE])) {
-                return $normalized;
-            }
-
-            if (isset($normalized['signature'])) {
-                return $headers + [InternalHeaders::SIGNATURE => $normalized['signature']];
-            }
-        }
-
-        throw new RuntimeException('Unable to obtain signature from HmacSigner.');
+    private function validCreateTenantRawBody(string $tenantUuid): string
+    {
+        return json_encode([
+            'tenant_uuid' => $tenantUuid,
+            'tenant_name' => 'Tenant Test',
+            'admin_user' => [
+                'name' => 'Admin Test',
+                'email' => 'admin@example.com',
+                'temp_password' => 'Temporal123!',
+            ],
+            'locale_config' => [
+                'timezone' => 'America/Lima',
+                'currency' => 'PEN',
+                'igv_rate' => 0.18,
+            ],
+        ]);
     }
 
     private function extractTenantUuid(object $dto): ?string
