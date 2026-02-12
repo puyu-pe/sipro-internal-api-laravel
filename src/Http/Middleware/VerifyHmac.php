@@ -13,6 +13,7 @@ use PuyuPe\SiproInternalApiCore\Errors\InternalApiError;
 use PuyuPe\SiproInternalApiCore\Http\InternalHeaders;
 use PuyuPe\SiproInternalApiCore\Http\Response\ErrorResponse;
 use PuyuPe\SiproInternalApiCore\Security\Hmac\HmacVerifier;
+use PuyuPe\SiproInternalApiCore\Security\Hmac\VerificationResult;
 use PuyuPe\SiproInternalApiLaravel\Security\Hmac\LaravelCacheNonceStore;
 use ReflectionMethod;
 use Symfony\Component\HttpFoundation\Response;
@@ -67,27 +68,36 @@ class VerifyHmac
             );
         }
 
-        $secret = $this->resolveSecret($headers[InternalHeaders::KEY_ID]);
-
-        if ($secret === null) {
-            return $this->errorResponse($this->buildInvalidSignatureError(), 401);
-        }
-
         try {
             $verification = $this->invokeVerifier(
                 $method,
                 $path,
                 $headers,
                 $body,
-                $secret,
                 $this->buildNonceStore(),
                 $request
             );
         } catch (InternalApiError $error) {
             $normalized = $this->normalizeError($error);
+
             return $this->errorResponse($normalized, $this->statusFor($normalized));
         } catch (Throwable) {
             return $this->errorResponse($this->buildInvalidSignatureError(), 401);
+        }
+
+        if ($verification instanceof VerificationResult) {
+            if (!$verification->ok) {
+                $error = new InternalApiError(
+                    $verification->errorCode ?? ErrorCode::INVALID_SIGNATURE,
+                    $verification->errorMessage ?? 'Invalid signature.',
+                    $verification->details
+                );
+                $normalized = $this->normalizeError($error);
+
+                return $this->errorResponse($normalized, $this->statusFor($normalized));
+            }
+
+            return $next($request);
         }
 
         if ($verification === false) {
@@ -102,11 +112,12 @@ class VerifyHmac
         string $path,
         array $headers,
         string $body,
-        string $secret,
         ?LaravelCacheNonceStore $nonceStore,
         Request $request
     ): mixed {
         $parameters = (new ReflectionMethod($this->verifier, 'verify'))->getParameters();
+
+        $resolveSecret = fn (string $keyId): ?string => $this->resolveSecret($keyId);
 
         $argumentsByName = [
             'method' => $method,
@@ -117,9 +128,12 @@ class VerifyHmac
             'headerMap' => $headers,
             'body' => $body,
             'rawBody' => $body,
-            'secret' => $secret,
-            'secretKey' => $secret,
-            'keySecret' => $secret,
+            'resolveSecretByKeyId' => $resolveSecret,
+            'secretResolver' => $resolveSecret,
+            'secretLookup' => $resolveSecret,
+            'secret' => $this->resolveSecret((string) ($headers[InternalHeaders::KEY_ID] ?? '')),
+            'secretKey' => $this->resolveSecret((string) ($headers[InternalHeaders::KEY_ID] ?? '')),
+            'keySecret' => $this->resolveSecret((string) ($headers[InternalHeaders::KEY_ID] ?? '')),
             'allowedClockSkewSeconds' => (int) config('sipro-internal-api-laravel.hmac.allowed_clock_skew_seconds', 300),
             'nonceStore' => $nonceStore,
             'nonceStorage' => $nonceStore,
@@ -152,6 +166,11 @@ class VerifyHmac
 
             if ($nonceStore !== null && $typeName !== null && is_a($nonceStore, $typeName)) {
                 $args[] = $nonceStore;
+                continue;
+            }
+
+            if ($typeName === 'callable') {
+                $args[] = $resolveSecret;
                 continue;
             }
 
@@ -193,7 +212,6 @@ class VerifyHmac
 
         return new LaravelCacheNonceStore($this->cacheFactory->store($store), $prefix);
     }
-
 
     private function normalizeError(InternalApiError $error): InternalApiError
     {
