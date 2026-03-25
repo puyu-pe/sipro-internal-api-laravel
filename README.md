@@ -33,7 +33,7 @@ Ejemplo de enfoque:
 ],
 ```
 
-4. **Implementar adapter de tenant en tu SaaS**
+4. **Implementar adapters de tenant en tu SaaS**
 
 Skeleton sugerido:
 
@@ -44,10 +44,15 @@ declare(strict_types=1);
 
 namespace App\InternalApi\Adapters;
 
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantCloneAdapterInterface;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantLifecycleAdapterInterface;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantProvisioningAdapterInterface;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionPayloadDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionResponseDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantExportRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantExportResponseDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantImportRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantImportResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantLifecycleRequestDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantLifecycleResponseDTO;
 use PuyuPe\SiproInternalApiLaravel\Exceptions\TenantAdapterException;
@@ -93,15 +98,40 @@ final class SaaSLifecycleAdapter implements TenantLifecycleAdapterInterface
         return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'normal', 'N');
     }
 }
+
+final class SaaSCloneAdapter implements TenantCloneAdapterInterface
+{
+    public function exportTenant(string $appKey, TenantExportRequestDTO $dto): TenantExportResponseDTO
+    {
+        return new TenantExportResponseDTO($appKey, $dto->projectCode ?? '', 'exported', null, []);
+    }
+
+    public function importTenant(string $appKey, TenantImportRequestDTO $dto): TenantImportResponseDTO
+    {
+        return new TenantImportResponseDTO($appKey, $dto->projectCode ?? '', 'imported', null, []);
+    }
+}
 ```
 
-5. **Configurar `adapter.class` con el FQCN**
+Si necesitas utilidades para provisioning (crear BD, setear system params, etc.), puedes extender `AbstractTenantProvisioningAdapter`.
+
+5. **Configurar adapters con el FQCN**
 
 ```php
 'adapter' => [
     'provisioning_class' => env('SIPRO_INTERNAL_API_PROVISIONING_ADAPTER_CLASS', App\InternalApi\Adapters\SaaSProvisioningAdapter::class),
     'lifecycle_class' => env('SIPRO_INTERNAL_API_LIFECYCLE_ADAPTER_CLASS', App\InternalApi\Adapters\SaaSLifecycleAdapter::class),
+    'clone_class' => env('SIPRO_INTERNAL_API_CLONE_ADAPTER_CLASS', App\InternalApi\Adapters\SaaSCloneAdapter::class),
 ],
 ```
 
-En local/testing, si `adapter.provisioning_class` o `adapter.lifecycle_class` está vacío, no existe o no implementa su interfaz, el package lanza una excepción clara al boot para facilitar diagnóstico temprano.
+En local/testing, si `adapter.provisioning_class`, `adapter.lifecycle_class` o `adapter.clone_class` está vacío, no existe o no implementa su interfaz, el package lanza una excepción clara al boot para facilitar diagnóstico temprano.
+
+6. **Rutas disponibles**
+
+- `POST /internal/v1/tenants`
+- `POST /internal/v1/tenants/{appKey}:warn`
+- `POST /internal/v1/tenants/{appKey}:suspend`
+- `POST /internal/v1/tenants/{appKey}:activate`
+- `POST /internal/v1/tenants/{appKey}:export`
+- `POST /internal/v1/tenants/{appKey}:import`

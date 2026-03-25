@@ -25,7 +25,9 @@ abstract class TestCase extends Orchestra
         $app['config']->set('app.env', 'testing');
         $app['config']->set('cache.default', 'array');
         $app['config']->set('sipro-internal-api-laravel.enabled', true);
-        $app['config']->set('sipro-internal-api-laravel.adapter.class', FakeTenantAdapter::class);
+        $app['config']->set('sipro-internal-api-laravel.adapter.provisioning_class', FakeTenantAdapter::class);
+        $app['config']->set('sipro-internal-api-laravel.adapter.lifecycle_class', FakeTenantAdapter::class);
+        $app['config']->set('sipro-internal-api-laravel.adapter.clone_class', FakeTenantAdapter::class);
         $app['config']->set('sipro-internal-api-laravel.hmac.allowed_clock_skew_seconds', 300);
         $app['config']->set('sipro-internal-api-laravel.hmac.keys', [
             $this->keyId => $this->secret,

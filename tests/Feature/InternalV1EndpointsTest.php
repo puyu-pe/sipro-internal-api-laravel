@@ -18,6 +18,26 @@ class InternalV1EndpointsTest extends TestCase
         $this->assertNotSame(404, $response->getStatusCode());
     }
 
+    public function test_lifecycle_routes_are_loaded(): void
+    {
+        $warn = $this->call('POST', '/internal/v1/tenants/appkey:warn', [], [], [], [], '{}');
+        $suspend = $this->call('POST', '/internal/v1/tenants/appkey:suspend', [], [], [], [], '{}');
+        $activate = $this->call('POST', '/internal/v1/tenants/appkey:activate', [], [], [], [], '{}');
+
+        $this->assertNotSame(404, $warn->getStatusCode());
+        $this->assertNotSame(404, $suspend->getStatusCode());
+        $this->assertNotSame(404, $activate->getStatusCode());
+    }
+
+    public function test_clone_routes_are_loaded(): void
+    {
+        $export = $this->call('POST', '/internal/v1/tenants/appkey:export', [], [], [], [], '{}');
+        $import = $this->call('POST', '/internal/v1/tenants/appkey:import', [], [], [], [], '{}');
+
+        $this->assertNotSame(404, $export->getStatusCode());
+        $this->assertNotSame(404, $import->getStatusCode());
+    }
+
     public function test_reject_missing_hmac_headers(): void
     {
         $response = $this->call('POST', '/internal/v1/tenants', [], [], [], [], '{}');
