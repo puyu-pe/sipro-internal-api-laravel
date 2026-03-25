@@ -16,6 +16,8 @@ return [
     ],
 
     'adapter' => [
-        'class' => env('SIPRO_INTERNAL_API_ADAPTER_CLASS'),
+        'provisioning_class' => env('SIPRO_INTERNAL_API_PROVISIONING_ADAPTER_CLASS', env('SIPRO_INTERNAL_API_ADAPTER_CLASS')),
+        'lifecycle_class' => env('SIPRO_INTERNAL_API_LIFECYCLE_ADAPTER_CLASS', env('SIPRO_INTERNAL_API_ADAPTER_CLASS')),
+        'clone_class' => env('SIPRO_INTERNAL_API_CLONE_ADAPTER_CLASS', env('SIPRO_INTERNAL_API_ADAPTER_CLASS')),
     ],
 ];

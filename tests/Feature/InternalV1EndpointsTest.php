@@ -47,8 +47,8 @@ class InternalV1EndpointsTest extends TestCase
     {
         FakeTenantAdapter::$lastCreateTenantRequest = null;
 
-        $tenantUuid = '11111111-1111-4111-8111-111111111111';
-        $rawBody = $this->validCreateTenantRawBody($tenantUuid);
+        $appKey = 'appkey-11111111-1111-4111-8111-111111111111';
+        $rawBody = $this->validCreateTenantRawBody($appKey);
         $headers = $this->signedHeaders('POST', '/internal/v1/tenants', $rawBody, (string) time(), 'nonce-ok-1');
 
         $response = $this->callRaw('POST', '/internal/v1/tenants', $rawBody, $headers);
@@ -58,8 +58,8 @@ class InternalV1EndpointsTest extends TestCase
 
         self::assertNotNull(FakeTenantAdapter::$lastCreateTenantRequest);
 
-        $receivedTenantUuid = $this->extractTenantUuid(FakeTenantAdapter::$lastCreateTenantRequest);
-        self::assertSame($tenantUuid, $receivedTenantUuid);
+        $receivedAppKey = $this->extractAppKey(FakeTenantAdapter::$lastCreateTenantRequest);
+        self::assertSame($appKey, $receivedAppKey);
     }
 
     public function test_nonce_replay_fails_when_enabled(): void
@@ -122,38 +122,83 @@ class InternalV1EndpointsTest extends TestCase
     }
 
 
-    private function validCreateTenantRawBody(string $tenantUuid): string
+    private function validCreateTenantRawBody(string $appKey): string
     {
         return json_encode([
-            'tenant_uuid' => $tenantUuid,
-            'tenant_name' => 'Tenant Test',
-            'admin_user' => [
-                'name' => 'Admin Test',
-                'email' => 'admin@example.com',
-                'temp_password' => 'Temporal123!',
+            'project' => [
+                'name' => 'Proyecto Demo',
+                'code' => 'pbuds00047',
+                'description' => 'Proyecto Demo',
+                'billingCycle' => 'monthly',
+                'priceAgreed' => 120.5,
+                'startDate' => '2026-03-01',
+                'renewalDate' => null,
+                'execStatus' => 'active',
+                'isActive' => true,
+                'accessUrlCustom' => null,
+                'accessUrls' => [
+                    'panel' => 'https://demo.local/panel',
+                ],
+                'appKey' => $appKey,
+                'logo' => null,
+                'address' => null,
+                'phone' => null,
+                'email' => null,
+                'ubigeo' => null,
+                'latitud' => null,
+                'longitud' => null,
+                'color' => null,
+                'notes' => null,
             ],
-            'locale_config' => [
-                'timezone' => 'America/Lima',
-                'currency' => 'PEN',
-                'igv_rate' => 0.18,
+            'client' => [
+                'ruc' => '20123456789',
+                'businessName' => 'Demo Transportes SAC',
+                'tradeName' => 'Demo Transportes',
+            ],
+            'services' => [
+                [
+                    'key' => 'yubus',
+                    'externalId' => null,
+                    'code' => 'YUBUS',
+                    'name' => 'Yubus',
+                    'description' => 'Sistema de transporte',
+                    'priceList' => 100.0,
+                    'defaultBillingCycle' => 'monthly',
+                    'type' => 'saas',
+                    'accessUrl' => null,
+                    'logo' => null,
+                    'credentials' => [
+                        [
+                            'name' => 'Admin Test',
+                            'username' => 'admin@example.com',
+                            'email' => 'admin@example.com',
+                            'role' => 'admin',
+                            'initialPassword' => 'Temporal123!',
+                            'mustChangePassword' => true,
+                        ],
+                    ],
+                    'modules' => [
+                        [
+                            'id' => null,
+                            'externalId' => null,
+                            'name' => 'Core',
+                            'description' => 'Modulo base',
+                            'price' => 0,
+                            'isUnlimited' => true,
+                            'customPrice' => null,
+                            'quantity' => 1,
+                        ],
+                    ],
+                ],
             ],
         ]);
     }
 
-    private function extractTenantUuid(object $dto): ?string
+    private function extractAppKey(object $dto): ?string
     {
-        if (property_exists($dto, 'tenant_uuid') && is_string($dto->tenant_uuid)) {
-            return $dto->tenant_uuid;
-        }
-
-        if (property_exists($dto, 'tenantUuid') && is_string($dto->tenantUuid)) {
-            return $dto->tenantUuid;
-        }
-
-        if (method_exists($dto, 'toArray')) {
-            $data = $dto->toArray();
-            if (is_array($data) && isset($data['tenant_uuid']) && is_string($data['tenant_uuid'])) {
-                return $data['tenant_uuid'];
+        if (property_exists($dto, 'project') && $dto->project !== null) {
+            if (property_exists($dto->project, 'appKey') && is_string($dto->project->appKey)) {
+                return $dto->project->appKey;
             }
         }
 

@@ -7,15 +7,21 @@ namespace PuyuPe\SiproInternalApiLaravel\Http\Controllers;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use PuyuPe\SiproInternalApiCore\Contracts\Dto\ActivateTenantRequest;
-use PuyuPe\SiproInternalApiCore\Contracts\Dto\CreateTenantRequest;
-use PuyuPe\SiproInternalApiCore\Contracts\Dto\SuspendTenantRequest;
-use PuyuPe\SiproInternalApiCore\Contracts\Dto\WarnTenantRequest;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionPayloadDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionResponseDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantLifecycleRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantLifecycleResponseDTO;
 use PuyuPe\SiproInternalApiCore\Errors\ErrorCode;
 use PuyuPe\SiproInternalApiCore\Errors\ErrorFactory;
 use PuyuPe\SiproInternalApiCore\Errors\InternalApiError;
 use PuyuPe\SiproInternalApiCore\Http\Response\ErrorResponse;
-use PuyuPe\SiproInternalApiLaravel\Contracts\TenantAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantLifecycleAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantProvisioningAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantCloneAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantExportRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantExportResponseDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantImportRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantImportResponseDTO;
 use PuyuPe\SiproInternalApiLaravel\Exceptions\TenantAdapterException;
 use Throwable;
 
@@ -27,94 +33,146 @@ class InternalV1Controller
 
     public function createTenant(Request $request): JsonResponse
     {
-        $dto = $this->buildValidatedDto(CreateTenantRequest::class, $request);
+        $dto = $this->buildValidatedDto(ProvisionPayloadDTO::class, $request);
 
         if ($dto instanceof JsonResponse) {
             return $dto;
         }
 
         try {
-            $data = $this->adapter()->createTenant($dto);
+            $result = $this->provisioningAdapter()->createTenant($dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
             return $this->provisionFailedResponse($exception);
         }
 
+        $payload = $result instanceof ProvisionResponseDTO ? $result->toArray() : [];
+
         return response()->json([
             'ok' => true,
-            'tenant_uuid' => $data['tenant_uuid'] ?? null,
-            'status' => 'created',
-            ...$data,
+            'status' => $payload['status'] ?? 'created',
+            ...$payload,
         ], 200);
     }
 
-    public function warnTenant(string $tenant_uuid, Request $request): JsonResponse
+    public function warnTenant(string $appKey, Request $request): JsonResponse
     {
-        $dto = $this->buildValidatedDto(WarnTenantRequest::class, $request);
+        $dto = $this->buildValidatedDto(TenantLifecycleRequestDTO::class, $request);
 
         if ($dto instanceof JsonResponse) {
             return $dto;
         }
 
         try {
-            $this->adapter()->warnTenant($tenant_uuid, $dto);
+            $result = $this->lifecycleAdapter()->warnTenant($appKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
             return $this->provisionFailedResponse($exception);
         }
 
+        $payload = $result instanceof TenantLifecycleResponseDTO ? $result->toArray() : [];
+
         return response()->json([
             'ok' => true,
-            'tenant_uuid' => $tenant_uuid,
-            'status' => 'warn',
+            ...$payload,
         ], 200);
     }
 
-    public function suspendTenant(string $tenant_uuid, Request $request): JsonResponse
+    public function suspendTenant(string $appKey, Request $request): JsonResponse
     {
-        $dto = $this->buildValidatedDto(SuspendTenantRequest::class, $request);
+        $dto = $this->buildValidatedDto(TenantLifecycleRequestDTO::class, $request);
 
         if ($dto instanceof JsonResponse) {
             return $dto;
         }
 
         try {
-            $this->adapter()->suspendTenant($tenant_uuid, $dto);
+            $result = $this->lifecycleAdapter()->suspendTenant($appKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
             return $this->provisionFailedResponse($exception);
         }
 
+        $payload = $result instanceof TenantLifecycleResponseDTO ? $result->toArray() : [];
+
         return response()->json([
             'ok' => true,
-            'tenant_uuid' => $tenant_uuid,
-            'status' => 'suspended',
+            ...$payload,
         ], 200);
     }
 
-    public function activateTenant(string $tenant_uuid, Request $request): JsonResponse
+    public function activateTenant(string $appKey, Request $request): JsonResponse
     {
-        $dto = $this->buildValidatedDto(ActivateTenantRequest::class, $request);
+        $dto = $this->buildValidatedDto(TenantLifecycleRequestDTO::class, $request);
 
         if ($dto instanceof JsonResponse) {
             return $dto;
         }
 
         try {
-            $this->adapter()->activateTenant($tenant_uuid, $dto);
+            $result = $this->lifecycleAdapter()->activateTenant($appKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
             return $this->provisionFailedResponse($exception);
         }
 
+        $payload = $result instanceof TenantLifecycleResponseDTO ? $result->toArray() : [];
+
         return response()->json([
             'ok' => true,
-            'tenant_uuid' => $tenant_uuid,
-            'status' => 'active',
+            ...$payload,
+        ], 200);
+    }
+
+    public function exportTenant(string $appKey, Request $request): JsonResponse
+    {
+        $dto = $this->buildValidatedDto(TenantExportRequestDTO::class, $request);
+
+        if ($dto instanceof JsonResponse) {
+            return $dto;
+        }
+
+        try {
+            $result = $this->cloneAdapter()->exportTenant($appKey, $dto);
+        } catch (TenantAdapterException $exception) {
+            return $this->adapterExceptionResponse($exception);
+        } catch (Throwable $exception) {
+            return $this->provisionFailedResponse($exception);
+        }
+
+        $payload = $result instanceof TenantExportResponseDTO ? $result->toArray() : [];
+
+        return response()->json([
+            'ok' => true,
+            ...$payload,
+        ], 200);
+    }
+
+    public function importTenant(string $appKey, Request $request): JsonResponse
+    {
+        $dto = $this->buildValidatedDto(TenantImportRequestDTO::class, $request);
+
+        if ($dto instanceof JsonResponse) {
+            return $dto;
+        }
+
+        try {
+            $result = $this->cloneAdapter()->importTenant($appKey, $dto);
+        } catch (TenantAdapterException $exception) {
+            return $this->adapterExceptionResponse($exception);
+        } catch (Throwable $exception) {
+            return $this->provisionFailedResponse($exception);
+        }
+
+        $payload = $result instanceof TenantImportResponseDTO ? $result->toArray() : [];
+
+        return response()->json([
+            'ok' => true,
+            ...$payload,
         ], 200);
     }
 
@@ -124,12 +182,13 @@ class InternalV1Controller
             /** @var array<string,mixed> $payload */
             $payload = $request->json()->all();
             $dto = $dtoClass::fromArray($payload);
-            $validation = $dto->validate();
+            if (method_exists($dto, 'validate')) {
+                $validation = $dto->validate();
+                if (method_exists($validation, 'ok') && $validation->ok() === false) {
+                    $validationError = ErrorFactory::validationError($validation);
 
-            if (method_exists($validation, 'ok') && $validation->ok() === false) {
-                $validationError = ErrorFactory::validationError($validation);
-
-                return response()->json(ErrorResponse::fromError($validationError)->toArray(), 400);
+                    return response()->json(ErrorResponse::fromError($validationError)->toArray(), 400);
+                }
             }
 
             return $dto;
@@ -142,13 +201,39 @@ class InternalV1Controller
         }
     }
 
-    private function adapter(): TenantAdapterInterface
+    private function provisioningAdapter(): TenantProvisioningAdapterInterface
     {
-        $adapter = $this->container->make(TenantAdapterInterface::class);
+        $adapter = $this->container->make(TenantProvisioningAdapterInterface::class);
 
-        if (!$adapter instanceof TenantAdapterInterface) {
+        if (!$adapter instanceof TenantProvisioningAdapterInterface) {
             throw new TenantAdapterException(
-                ErrorFactory::provisionFailed('Resolved adapter does not implement TenantAdapterInterface.')
+                ErrorFactory::provisionFailed('Resolved adapter does not implement TenantProvisioningAdapterInterface.')
+            );
+        }
+
+        return $adapter;
+    }
+
+    private function lifecycleAdapter(): TenantLifecycleAdapterInterface
+    {
+        $adapter = $this->container->make(TenantLifecycleAdapterInterface::class);
+
+        if (!$adapter instanceof TenantLifecycleAdapterInterface) {
+            throw new TenantAdapterException(
+                ErrorFactory::provisionFailed('Resolved adapter does not implement TenantLifecycleAdapterInterface.')
+            );
+        }
+
+        return $adapter;
+    }
+
+    private function cloneAdapter(): TenantCloneAdapterInterface
+    {
+        $adapter = $this->container->make(TenantCloneAdapterInterface::class);
+
+        if (!$adapter instanceof TenantCloneAdapterInterface) {
+            throw new TenantAdapterException(
+                ErrorFactory::provisionFailed('Resolved adapter does not implement TenantCloneAdapterInterface.')
             );
         }
 

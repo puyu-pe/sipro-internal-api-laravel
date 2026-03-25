@@ -44,38 +44,53 @@ declare(strict_types=1);
 
 namespace App\InternalApi\Adapters;
 
-use PuyuPe\SiproInternalApiCore\Dto\ActivateTenantRequest;
-use PuyuPe\SiproInternalApiCore\Dto\CreateTenantRequest;
-use PuyuPe\SiproInternalApiCore\Dto\SuspendTenantRequest;
-use PuyuPe\SiproInternalApiCore\Dto\WarnTenantRequest;
-use PuyuPe\SiproInternalApiLaravel\Contracts\TenantAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantLifecycleAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantProvisioningAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionPayloadDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionResponseDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantLifecycleRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantLifecycleResponseDTO;
 use PuyuPe\SiproInternalApiLaravel\Exceptions\TenantAdapterException;
 
-final class SaaSTenantAdapter implements TenantAdapterInterface
+final class SaaSProvisioningAdapter implements TenantProvisioningAdapterInterface
 {
-    public function createTenant(CreateTenantRequest $dto): array
+    public function createTenant(ProvisionPayloadDTO $dto): ProvisionResponseDTO
     {
         // 1) Validar reglas de negocio de tu SaaS.
         // 2) Crear tenant en BD/sistemas.
         // 3) Retornar payload adicional para response.
-        return [
-            'tenant_uuid' => 'generated-uuid',
-        ];
+        return new ProvisionResponseDTO(
+            appKey: $dto->project->appKey ?? '',
+            projectCode: $dto->project->code,
+            database: 'db_name',
+            status: 'created',
+            provisionedAt: gmdate('c'),
+            dbHost: null,
+            migrated: false,
+            seeded: false,
+            systemParametersUpdated: false,
+            usersCreated: 0,
+            executionTimeMs: 0,
+            warnings: []
+        );
+    }
+}
+
+final class SaaSLifecycleAdapter implements TenantLifecycleAdapterInterface
+{
+    public function warnTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
+    {
+        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'debt', 'D');
     }
 
-    public function warnTenant(string $tenantUuid, WarnTenantRequest $dto): void
+    public function suspendTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
     {
-        // Marcar tenant como advertido.
+        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'suspended', 'S');
     }
 
-    public function suspendTenant(string $tenantUuid, SuspendTenantRequest $dto): void
+    public function activateTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
     {
-        // Suspender tenant.
-    }
-
-    public function activateTenant(string $tenantUuid, ActivateTenantRequest $dto): void
-    {
-        // Reactivar tenant.
+        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'normal', 'N');
     }
 }
 ```
@@ -84,8 +99,9 @@ final class SaaSTenantAdapter implements TenantAdapterInterface
 
 ```php
 'adapter' => [
-    'class' => env('SIPRO_INTERNAL_API_ADAPTER_CLASS', App\InternalApi\Adapters\SaaSTenantAdapter::class),
+    'provisioning_class' => env('SIPRO_INTERNAL_API_PROVISIONING_ADAPTER_CLASS', App\InternalApi\Adapters\SaaSProvisioningAdapter::class),
+    'lifecycle_class' => env('SIPRO_INTERNAL_API_LIFECYCLE_ADAPTER_CLASS', App\InternalApi\Adapters\SaaSLifecycleAdapter::class),
 ],
 ```
 
-En local/testing, si `adapter.class` está vacío, no existe o no implementa `TenantAdapterInterface`, el package lanza una excepción clara al boot para facilitar diagnóstico temprano.
+En local/testing, si `adapter.provisioning_class` o `adapter.lifecycle_class` está vacío, no existe o no implementa su interfaz, el package lanza una excepción clara al boot para facilitar diagnóstico temprano.
