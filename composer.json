@@ -1,6 +1,6 @@
 {
     "name": "puyu-pe/sipro-internal-api-laravel",
-    "version": "0.1.0",$
+    "version": "1.0.1",
     "description": "Laravel bridge package for the internal /internal/v1 API.",
     "type": "library",
     "license": "proprietary",
