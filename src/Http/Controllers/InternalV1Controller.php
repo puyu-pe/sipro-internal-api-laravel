@@ -128,6 +128,54 @@ class InternalV1Controller
         ], 200);
     }
 
+    public function closeTenant(string $appKey, Request $request): JsonResponse
+    {
+        $dto = $this->buildValidatedDto(TenantLifecycleRequestDTO::class, $request);
+
+        if ($dto instanceof JsonResponse) {
+            return $dto;
+        }
+
+        try {
+            $result = $this->lifecycleAdapter()->closeTenant($appKey, $dto);
+        } catch (TenantAdapterException $exception) {
+            return $this->adapterExceptionResponse($exception);
+        } catch (Throwable $exception) {
+            return $this->provisionFailedResponse($exception);
+        }
+
+        $payload = $result instanceof TenantLifecycleResponseDTO ? $result->toArray() : [];
+
+        return response()->json([
+            'ok' => true,
+            ...$payload,
+        ], 200);
+    }
+
+    public function reopenTenant(string $appKey, Request $request): JsonResponse
+    {
+        $dto = $this->buildValidatedDto(TenantLifecycleRequestDTO::class, $request);
+
+        if ($dto instanceof JsonResponse) {
+            return $dto;
+        }
+
+        try {
+            $result = $this->lifecycleAdapter()->reopenTenant($appKey, $dto);
+        } catch (TenantAdapterException $exception) {
+            return $this->adapterExceptionResponse($exception);
+        } catch (Throwable $exception) {
+            return $this->provisionFailedResponse($exception);
+        }
+
+        $payload = $result instanceof TenantLifecycleResponseDTO ? $result->toArray() : [];
+
+        return response()->json([
+            'ok' => true,
+            ...$payload,
+        ], 200);
+    }
+
     public function exportTenant(string $appKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(TenantExportRequestDTO::class, $request);

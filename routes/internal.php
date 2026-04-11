@@ -13,6 +13,8 @@ Route::prefix('internal/v1')
         Route::post('/tenants/{appKey}:warn', [InternalV1Controller::class, 'warnTenant']);
         Route::post('/tenants/{appKey}:suspend', [InternalV1Controller::class, 'suspendTenant']);
         Route::post('/tenants/{appKey}:activate', [InternalV1Controller::class, 'activateTenant']);
+        Route::post('/tenants/{appKey}:close', [InternalV1Controller::class, 'closeTenant']);
+        Route::post('/tenants/{appKey}:reopen', [InternalV1Controller::class, 'reopenTenant']);
         Route::post('/tenants/{appKey}:export', [InternalV1Controller::class, 'exportTenant']);
         Route::post('/tenants/{appKey}:import', [InternalV1Controller::class, 'importTenant']);
     });
