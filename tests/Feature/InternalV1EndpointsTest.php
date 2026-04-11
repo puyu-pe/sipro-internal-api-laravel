@@ -29,6 +29,15 @@ class InternalV1EndpointsTest extends TestCase
         $this->assertNotSame(404, $activate->getStatusCode());
     }
 
+    public function test_closure_routes_are_loaded(): void
+    {
+        $close = $this->call('POST', '/internal/v1/tenants/appkey:close', [], [], [], [], '{}');
+        $reopen = $this->call('POST', '/internal/v1/tenants/appkey:reopen', [], [], [], [], '{}');
+
+        $this->assertNotSame(404, $close->getStatusCode());
+        $this->assertNotSame(404, $reopen->getStatusCode());
+    }
+
     public function test_clone_routes_are_loaded(): void
     {
         $export = $this->call('POST', '/internal/v1/tenants/appkey:export', [], [], [], [], '{}');

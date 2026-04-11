@@ -64,6 +64,20 @@ class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLif
         return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'normal', 'N');
     }
 
+    public function closeTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
+    {
+        self::$lastLifecycleRequest = $dto;
+
+        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'closed', 'C');
+    }
+
+    public function reopenTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
+    {
+        self::$lastLifecycleRequest = $dto;
+
+        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'active', 'N');
+    }
+
     public function exportTenant(string $appKey, TenantExportRequestDTO $dto): TenantExportResponseDTO
     {
         self::$lastExportTenantRequest = $dto;
