@@ -97,6 +97,16 @@ final class SaaSLifecycleAdapter implements TenantLifecycleAdapterInterface
     {
         return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'normal', 'N');
     }
+
+    public function closeTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
+    {
+        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'closed', 'C');
+    }
+
+    public function reopenTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
+    {
+        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'normal', 'N');
+    }
 }
 
 final class SaaSCloneAdapter implements TenantCloneAdapterInterface
@@ -133,5 +143,7 @@ En local/testing, si `adapter.provisioning_class`, `adapter.lifecycle_class` o `
 - `POST /internal/v1/tenants/{appKey}:warn`
 - `POST /internal/v1/tenants/{appKey}:suspend`
 - `POST /internal/v1/tenants/{appKey}:activate`
+- `POST /internal/v1/tenants/{appKey}:close`
+- `POST /internal/v1/tenants/{appKey}:reopen`
 - `POST /internal/v1/tenants/{appKey}:export`
 - `POST /internal/v1/tenants/{appKey}:import`

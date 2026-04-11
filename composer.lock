@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "092d41c78e0afcddcb5d6267b074d963",
+    "content-hash": "b66b3c1dfd84c365e995937dc9684e06",
     "packages": [
         {
             "name": "brick/math",
@@ -2891,17 +2891,11 @@
         },
         {
             "name": "puyu-pe/sipro-internal-api-core",
-            "version": "v0.1.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/puyu-pe/sipro-internal-api-core.git",
-                "reference": "5e57d6ff0eb339acf78908d28cc6c14b1a10a195"
-            },
+            "version": "1.1.0",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/puyu-pe/sipro-internal-api-core/zipball/5e57d6ff0eb339acf78908d28cc6c14b1a10a195",
-                "reference": "5e57d6ff0eb339acf78908d28cc6c14b1a10a195",
-                "shasum": ""
+                "type": "path",
+                "url": "../core",
+                "reference": "cab9e44ece2b1e11ad56b6a7f0ba12e76490844d"
             },
             "require": {
                 "php": ">=8.1"
@@ -2915,16 +2909,24 @@
                     "PuyuPe\\SiproInternalApiCore\\": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "PuyuPe\\SiproInternalApiCore\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit"
+                ]
+            },
             "license": [
                 "MIT"
             ],
             "description": "Framework-agnostic core contracts, HMAC security utilities, and API response/error standards for SIPRO internal API.",
-            "support": {
-                "issues": "https://github.com/puyu-pe/sipro-internal-api-core/issues",
-                "source": "https://github.com/puyu-pe/sipro-internal-api-core/tree/v0.1.0"
-            },
-            "time": "2026-02-11T13:55:58+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "ralouphie/getallheaders",
@@ -8778,7 +8780,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "puyu-pe/sipro-internal-api-core": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
