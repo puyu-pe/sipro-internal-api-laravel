@@ -47,6 +47,13 @@ class InternalV1EndpointsTest extends TestCase
         $this->assertNotSame(404, $import->getStatusCode());
     }
 
+    public function test_impersonate_route_is_loaded(): void
+    {
+        $response = $this->call('POST', '/internal/v1/tenants/appkey:impersonate', [], [], [], [], '{}');
+
+        $this->assertNotSame(404, $response->getStatusCode());
+    }
+
     public function test_reject_missing_hmac_headers(): void
     {
         $response = $this->call('POST', '/internal/v1/tenants', [], [], [], [], '{}');

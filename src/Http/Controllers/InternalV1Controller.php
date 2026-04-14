@@ -7,29 +7,30 @@ namespace PuyuPe\SiproInternalApiLaravel\Http\Controllers;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantCloneAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantImpersonationAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantLifecycleAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantProvisioningAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonationRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonationResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionPayloadDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionResponseDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantExportRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantExportResponseDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantImportRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantImportResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantLifecycleRequestDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantLifecycleResponseDTO;
 use PuyuPe\SiproInternalApiCore\Errors\ErrorCode;
 use PuyuPe\SiproInternalApiCore\Errors\ErrorFactory;
 use PuyuPe\SiproInternalApiCore\Errors\InternalApiError;
 use PuyuPe\SiproInternalApiCore\Http\Response\ErrorResponse;
-use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantLifecycleAdapterInterface;
-use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantProvisioningAdapterInterface;
-use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantCloneAdapterInterface;
-use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantExportRequestDTO;
-use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantExportResponseDTO;
-use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantImportRequestDTO;
-use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantImportResponseDTO;
 use PuyuPe\SiproInternalApiLaravel\Exceptions\TenantAdapterException;
 use Throwable;
 
 class InternalV1Controller
 {
-    public function __construct(private readonly Container $container)
-    {
-    }
+    public function __construct(private readonly Container $container) {}
 
     public function createTenant(Request $request): JsonResponse
     {
@@ -224,6 +225,30 @@ class InternalV1Controller
         ], 200);
     }
 
+    public function impersonateUser(string $appKey, Request $request): JsonResponse
+    {
+        $dto = $this->buildValidatedDto(ImpersonationRequestDTO::class, $request);
+
+        if ($dto instanceof JsonResponse) {
+            return $dto;
+        }
+
+        try {
+            $result = $this->impersonationAdapter()->impersonateUser($appKey, $dto);
+        } catch (TenantAdapterException $exception) {
+            return $this->adapterExceptionResponse($exception);
+        } catch (Throwable $exception) {
+            return $this->provisionFailedResponse($exception);
+        }
+
+        $payload = $result instanceof ImpersonationResponseDTO ? $result->toArray() : [];
+
+        return response()->json([
+            'ok' => true,
+            ...$payload,
+        ], 200);
+    }
+
     private function buildValidatedDto(string $dtoClass, Request $request): mixed
     {
         try {
@@ -253,7 +278,7 @@ class InternalV1Controller
     {
         $adapter = $this->container->make(TenantProvisioningAdapterInterface::class);
 
-        if (!$adapter instanceof TenantProvisioningAdapterInterface) {
+        if (! $adapter instanceof TenantProvisioningAdapterInterface) {
             throw new TenantAdapterException(
                 ErrorFactory::provisionFailed('Resolved adapter does not implement TenantProvisioningAdapterInterface.')
             );
@@ -266,7 +291,7 @@ class InternalV1Controller
     {
         $adapter = $this->container->make(TenantLifecycleAdapterInterface::class);
 
-        if (!$adapter instanceof TenantLifecycleAdapterInterface) {
+        if (! $adapter instanceof TenantLifecycleAdapterInterface) {
             throw new TenantAdapterException(
                 ErrorFactory::provisionFailed('Resolved adapter does not implement TenantLifecycleAdapterInterface.')
             );
@@ -279,9 +304,22 @@ class InternalV1Controller
     {
         $adapter = $this->container->make(TenantCloneAdapterInterface::class);
 
-        if (!$adapter instanceof TenantCloneAdapterInterface) {
+        if (! $adapter instanceof TenantCloneAdapterInterface) {
             throw new TenantAdapterException(
                 ErrorFactory::provisionFailed('Resolved adapter does not implement TenantCloneAdapterInterface.')
+            );
+        }
+
+        return $adapter;
+    }
+
+    private function impersonationAdapter(): TenantImpersonationAdapterInterface
+    {
+        $adapter = $this->container->make(TenantImpersonationAdapterInterface::class);
+
+        if (! $adapter instanceof TenantImpersonationAdapterInterface) {
+            throw new TenantAdapterException(
+                ErrorFactory::impersonationFailed('Resolved adapter does not implement TenantImpersonationAdapterInterface.')
             );
         }
 
@@ -294,6 +332,7 @@ class InternalV1Controller
 
         $status = match ($this->extractErrorCode($error)) {
             ErrorCode::TENANT_NOT_FOUND => 404,
+            ErrorCode::USER_NOT_FOUND => 404,
             ErrorCode::TENANT_ALREADY_EXISTS => 409,
             default => 500,
         };
@@ -309,7 +348,6 @@ class InternalV1Controller
 
         return response()->json(ErrorResponse::fromError($error)->toArray(), 500);
     }
-
 
     private function extractErrorCode(InternalApiError $error): ErrorCode
     {
