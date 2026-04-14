@@ -6,6 +6,7 @@ namespace PuyuPe\SiproInternalApiLaravel;
 
 use Illuminate\Support\ServiceProvider;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantCloneAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantImpersonationAdapterInterface;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantLifecycleAdapterInterface;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantProvisioningAdapterInterface;
 use RuntimeException;
@@ -15,7 +16,7 @@ class SiproInternalApiLaravelServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/sipro-internal-api-laravel.php',
+            __DIR__.'/../config/sipro-internal-api-laravel.php',
             'sipro-internal-api-laravel'
         );
 
@@ -36,12 +37,18 @@ class SiproInternalApiLaravelServiceProvider extends ServiceProvider
 
             return $app->make($configuredClass);
         });
+
+        $this->app->bind(TenantImpersonationAdapterInterface::class, function ($app) {
+            $configuredClass = $this->resolveAdapterClass('impersonation_class');
+
+            return $app->make($configuredClass);
+        });
     }
 
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/../config/sipro-internal-api-laravel.php' => config_path('sipro-internal-api-laravel.php'),
+            __DIR__.'/../config/sipro-internal-api-laravel.php' => config_path('sipro-internal-api-laravel.php'),
         ], 'sipro-internal-api-laravel-config');
 
         if ($this->app->environment(['local', 'testing'])) {
@@ -49,7 +56,7 @@ class SiproInternalApiLaravelServiceProvider extends ServiceProvider
         }
 
         if (config('sipro-internal-api-laravel.enabled') === true) {
-            $this->loadRoutesFrom(__DIR__ . '/../routes/internal.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/internal.php');
         }
     }
 
@@ -58,13 +65,18 @@ class SiproInternalApiLaravelServiceProvider extends ServiceProvider
         $this->assertAdapterIsValid('provisioning_class', TenantProvisioningAdapterInterface::class);
         $this->assertAdapterIsValid('lifecycle_class', TenantLifecycleAdapterInterface::class);
         $this->assertAdapterIsValid('clone_class', TenantCloneAdapterInterface::class);
+
+        $impersonationClass = config('sipro-internal-api-laravel.adapter.impersonation_class');
+        if (is_string($impersonationClass) && $impersonationClass !== '') {
+            $this->assertAdapterIsValid('impersonation_class', TenantImpersonationAdapterInterface::class);
+        }
     }
 
     private function resolveAdapterClass(string $key): string
     {
-        $configuredClass = config('sipro-internal-api-laravel.adapter.' . $key);
+        $configuredClass = config('sipro-internal-api-laravel.adapter.'.$key);
 
-        if (!is_string($configuredClass) || $configuredClass === '') {
+        if (! is_string($configuredClass) || $configuredClass === '') {
             throw new RuntimeException(sprintf('sipro-internal-api-laravel.adapter.%s is not configured.', $key));
         }
 
@@ -75,11 +87,11 @@ class SiproInternalApiLaravelServiceProvider extends ServiceProvider
     {
         $configuredClass = $this->resolveAdapterClass($key);
 
-        if (!class_exists($configuredClass)) {
+        if (! class_exists($configuredClass)) {
             throw new RuntimeException(sprintf('Configured adapter class does not exist: %s', $configuredClass));
         }
 
-        if (!is_subclass_of($configuredClass, $interface)) {
+        if (! is_subclass_of($configuredClass, $interface)) {
             throw new RuntimeException(sprintf(
                 'Configured adapter class must implement %s: %s',
                 $interface,

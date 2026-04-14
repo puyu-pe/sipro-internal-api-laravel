@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PuyuPe\SiproInternalApiLaravel\Tests\Fixtures;
 
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonationRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonationResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionPayloadDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantExportRequestDTO;
@@ -13,15 +15,17 @@ use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantImportResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantLifecycleRequestDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantLifecycleResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantCloneAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantImpersonationAdapterInterface;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantLifecycleAdapterInterface;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantProvisioningAdapterInterface;
 
-class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLifecycleAdapterInterface, TenantCloneAdapterInterface
+class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLifecycleAdapterInterface, TenantCloneAdapterInterface, TenantImpersonationAdapterInterface
 {
     public static ?ProvisionPayloadDTO $lastCreateTenantRequest = null;
     public static ?TenantLifecycleRequestDTO $lastLifecycleRequest = null;
     public static ?TenantExportRequestDTO $lastExportTenantRequest = null;
     public static ?TenantImportRequestDTO $lastImportTenantRequest = null;
+    public static ?ImpersonationRequestDTO $lastImpersonationRequest = null;
 
     public function createTenant(ProvisionPayloadDTO $dto): ProvisionResponseDTO
     {
@@ -90,6 +94,18 @@ class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLif
         self::$lastImportTenantRequest = $dto;
 
         return new TenantImportResponseDTO($appKey, $dto->projectCode ?? '', 'imported', null, []);
+    }
+
+    public function impersonateUser(string $appKey, ImpersonationRequestDTO $dto): ImpersonationResponseDTO
+    {
+        self::$lastImpersonationRequest = $dto;
+
+        return new ImpersonationResponseDTO(
+            appKey: $appKey,
+            projectCode: $dto->projectCode,
+            status: 'impersonation_ready',
+            accessUrl: '/support/enter/fake-token-123',
+        );
     }
 
     private function extractAppKey(ProvisionPayloadDTO $dto): string
