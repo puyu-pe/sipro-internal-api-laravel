@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace PuyuPe\SiproInternalApiLaravel\Tests\Fixtures;
 
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonableUserListItemDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonableUserSearchRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonableUserSearchResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonationRequestDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonationResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionPayloadDTO;
@@ -25,6 +28,7 @@ class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLif
     public static ?TenantLifecycleRequestDTO $lastLifecycleRequest = null;
     public static ?TenantExportRequestDTO $lastExportTenantRequest = null;
     public static ?TenantImportRequestDTO $lastImportTenantRequest = null;
+    public static ?ImpersonableUserSearchRequestDTO $lastImpersonableUserSearchRequest = null;
     public static ?ImpersonationRequestDTO $lastImpersonationRequest = null;
 
     public function createTenant(ProvisionPayloadDTO $dto): ProvisionResponseDTO
@@ -96,6 +100,23 @@ class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLif
         return new TenantImportResponseDTO($appKey, $dto->projectCode ?? '', 'imported', null, []);
     }
 
+    public function searchImpersonableUsers(string $appKey, ImpersonableUserSearchRequestDTO $dto): ImpersonableUserSearchResponseDTO
+    {
+        self::$lastImpersonableUserSearchRequest = $dto;
+
+        return new ImpersonableUserSearchResponseDTO(
+            appKey: $appKey,
+            projectCode: $dto->projectCode,
+            users: [
+                new ImpersonableUserListItemDTO(42, 'jgarcia', 'Juan Garcia'),
+            ],
+            page: $dto->page,
+            perPage: $dto->perPage,
+            total: 1,
+            hasNextPage: false,
+        );
+    }
+
     public function impersonateUser(string $appKey, ImpersonationRequestDTO $dto): ImpersonationResponseDTO
     {
         self::$lastImpersonationRequest = $dto;
@@ -105,6 +126,7 @@ class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLif
             projectCode: $dto->projectCode,
             status: 'impersonation_ready',
             accessUrl: '/support/enter/fake-token-123',
+            effectiveDurationMinutes: $dto->durationMinutes ?? 5,
         );
     }
 
