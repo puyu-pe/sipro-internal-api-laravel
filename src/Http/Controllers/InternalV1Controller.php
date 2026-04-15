@@ -60,7 +60,7 @@ class InternalV1Controller
         ], 200);
     }
 
-    public function warnTenant(string $appKey, Request $request): JsonResponse
+    public function warnTenant(string $resolveKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(TenantLifecycleRequestDTO::class, $request);
 
@@ -69,7 +69,7 @@ class InternalV1Controller
         }
 
         try {
-            $result = $this->lifecycleAdapter()->warnTenant($appKey, $dto);
+            $result = $this->lifecycleAdapter()->warnTenant($resolveKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
@@ -84,7 +84,7 @@ class InternalV1Controller
         ], 200);
     }
 
-    public function suspendTenant(string $appKey, Request $request): JsonResponse
+    public function suspendTenant(string $resolveKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(TenantLifecycleRequestDTO::class, $request);
 
@@ -93,7 +93,7 @@ class InternalV1Controller
         }
 
         try {
-            $result = $this->lifecycleAdapter()->suspendTenant($appKey, $dto);
+            $result = $this->lifecycleAdapter()->suspendTenant($resolveKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
@@ -108,7 +108,7 @@ class InternalV1Controller
         ], 200);
     }
 
-    public function activateTenant(string $appKey, Request $request): JsonResponse
+    public function activateTenant(string $resolveKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(TenantLifecycleRequestDTO::class, $request);
 
@@ -117,7 +117,7 @@ class InternalV1Controller
         }
 
         try {
-            $result = $this->lifecycleAdapter()->activateTenant($appKey, $dto);
+            $result = $this->lifecycleAdapter()->activateTenant($resolveKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
@@ -132,7 +132,7 @@ class InternalV1Controller
         ], 200);
     }
 
-    public function closeTenant(string $appKey, Request $request): JsonResponse
+    public function closeTenant(string $resolveKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(TenantLifecycleRequestDTO::class, $request);
 
@@ -141,7 +141,7 @@ class InternalV1Controller
         }
 
         try {
-            $result = $this->lifecycleAdapter()->closeTenant($appKey, $dto);
+            $result = $this->lifecycleAdapter()->closeTenant($resolveKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
@@ -156,7 +156,7 @@ class InternalV1Controller
         ], 200);
     }
 
-    public function reopenTenant(string $appKey, Request $request): JsonResponse
+    public function reopenTenant(string $resolveKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(TenantLifecycleRequestDTO::class, $request);
 
@@ -165,7 +165,7 @@ class InternalV1Controller
         }
 
         try {
-            $result = $this->lifecycleAdapter()->reopenTenant($appKey, $dto);
+            $result = $this->lifecycleAdapter()->reopenTenant($resolveKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
@@ -180,7 +180,7 @@ class InternalV1Controller
         ], 200);
     }
 
-    public function exportTenant(string $appKey, Request $request): JsonResponse
+    public function exportTenant(string $resolveKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(TenantExportRequestDTO::class, $request);
 
@@ -189,7 +189,7 @@ class InternalV1Controller
         }
 
         try {
-            $result = $this->cloneAdapter()->exportTenant($appKey, $dto);
+            $result = $this->cloneAdapter()->exportTenant($resolveKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
@@ -204,7 +204,7 @@ class InternalV1Controller
         ], 200);
     }
 
-    public function importTenant(string $appKey, Request $request): JsonResponse
+    public function importTenant(string $resolveKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(TenantImportRequestDTO::class, $request);
 
@@ -213,7 +213,7 @@ class InternalV1Controller
         }
 
         try {
-            $result = $this->cloneAdapter()->importTenant($appKey, $dto);
+            $result = $this->cloneAdapter()->importTenant($resolveKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
@@ -228,7 +228,7 @@ class InternalV1Controller
         ], 200);
     }
 
-    public function searchImpersonableUsers(string $appKey, Request $request): JsonResponse
+    public function searchImpersonableUsers(string $resolveKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(ImpersonableUserSearchRequestDTO::class, $request);
 
@@ -237,7 +237,7 @@ class InternalV1Controller
         }
 
         try {
-            $result = $this->impersonationAdapter()->searchImpersonableUsers($appKey, $dto);
+            $result = $this->impersonationAdapter()->searchImpersonableUsers($resolveKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
@@ -252,7 +252,7 @@ class InternalV1Controller
         ], 200);
     }
 
-    public function impersonateUser(string $appKey, Request $request): JsonResponse
+    public function impersonateUser(string $resolveKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(ImpersonationRequestDTO::class, $request);
 
@@ -261,7 +261,7 @@ class InternalV1Controller
         }
 
         try {
-            $result = $this->impersonationAdapter()->impersonateUser($appKey, $dto);
+            $result = $this->impersonationAdapter()->impersonateUser($resolveKey, $dto);
         } catch (TenantAdapterException $exception) {
             return $this->adapterExceptionResponse($exception);
         } catch (Throwable $exception) {
