@@ -126,7 +126,7 @@ class InternalV1EndpointsTest extends TestCase
     public function test_search_endpoint_returns_validation_error_for_invalid_pagination(): void
     {
         $rawBody = json_encode([
-            'appKey' => 'appkey-11111111-1111-4111-8111-111111111111',
+            'resolveKey' => 'appkey-11111111-1111-4111-8111-111111111111',
             'projectCode' => 'pbuds00047',
             'page' => 0,
             'perPage' => 51,
@@ -151,7 +151,7 @@ class InternalV1EndpointsTest extends TestCase
         FakeTenantAdapter::$lastImpersonableUserSearchRequest = null;
 
         $rawBody = json_encode([
-            'appKey' => 'appkey-11111111-1111-4111-8111-111111111111',
+            'resolveKey' => 'appkey-11111111-1111-4111-8111-111111111111',
             'projectCode' => 'pbuds00047',
             'query' => 'juan',
             'page' => 1,
@@ -177,7 +177,7 @@ class InternalV1EndpointsTest extends TestCase
     public function test_impersonate_endpoint_validates_duration_policy(): void
     {
         $rawBody = json_encode([
-            'appKey' => 'appkey-11111111-1111-4111-8111-111111111111',
+            'resolveKey' => 'appkey-11111111-1111-4111-8111-111111111111',
             'projectCode' => 'pbuds00047',
             'targetUserId' => 42,
             'durationMinutes' => 61,
@@ -202,7 +202,7 @@ class InternalV1EndpointsTest extends TestCase
         FakeTenantAdapter::$lastImpersonationRequest = null;
 
         $rawBody = json_encode([
-            'appKey' => 'appkey-11111111-1111-4111-8111-111111111111',
+            'resolveKey' => 'appkey-11111111-1111-4111-8111-111111111111',
             'projectCode' => 'pbuds00047',
             'targetUserId' => 42,
             'durationMinutes' => 30,
@@ -264,7 +264,7 @@ class InternalV1EndpointsTest extends TestCase
     }
 
 
-    private function validCreateTenantRawBody(string $appKey): string
+    private function validCreateTenantRawBody(string $resolveKey): string
     {
         return json_encode([
             'project' => [
@@ -281,7 +281,7 @@ class InternalV1EndpointsTest extends TestCase
                 'accessUrls' => [
                     'panel' => 'https://demo.local/panel',
                 ],
-                'appKey' => $appKey,
+                'resolveKey' => $resolveKey,
                 'logo' => null,
                 'address' => null,
                 'phone' => null,
@@ -336,11 +336,11 @@ class InternalV1EndpointsTest extends TestCase
         ]);
     }
 
-    private function extractAppKey(object $dto): ?string
+    private function extractResolveKey(object $dto): ?string
     {
         if (property_exists($dto, 'project') && $dto->project !== null) {
-            if (property_exists($dto->project, 'appKey') && is_string($dto->project->appKey)) {
-                return $dto->project->appKey;
+            if (property_exists($dto->project, 'resolveKey') && is_string($dto->project->resolveKey)) {
+                return $dto->project->resolveKey;
             }
         }
 

@@ -36,7 +36,7 @@ class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLif
         self::$lastCreateTenantRequest = $dto;
 
         return new ProvisionResponseDTO(
-            appKey: $this->extractAppKey($dto),
+            resolveKey: $this->extractResolveKey($dto),
             projectCode: $dto->project->code,
             database: 'yubus_dev_fake',
             status: 'created',
@@ -51,61 +51,61 @@ class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLif
         );
     }
 
-    public function warnTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
+    public function warnTenant(string $resolveKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
     {
         self::$lastLifecycleRequest = $dto;
 
-        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'debt', 'D');
+        return new TenantLifecycleResponseDTO($resolveKey, $dto->projectCode, 'debt', 'D');
     }
 
-    public function suspendTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
+    public function suspendTenant(string $resolveKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
     {
         self::$lastLifecycleRequest = $dto;
 
-        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'suspended', 'S');
+        return new TenantLifecycleResponseDTO($resolveKey, $dto->projectCode, 'suspended', 'S');
     }
 
-    public function activateTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
+    public function activateTenant(string $resolveKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
     {
         self::$lastLifecycleRequest = $dto;
 
-        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'normal', 'N');
+        return new TenantLifecycleResponseDTO($resolveKey, $dto->projectCode, 'normal', 'N');
     }
 
-    public function closeTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
+    public function closeTenant(string $resolveKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
     {
         self::$lastLifecycleRequest = $dto;
 
-        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'closed', 'C');
+        return new TenantLifecycleResponseDTO($resolveKey, $dto->projectCode, 'closed', 'C');
     }
 
-    public function reopenTenant(string $appKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
+    public function reopenTenant(string $resolveKey, TenantLifecycleRequestDTO $dto): TenantLifecycleResponseDTO
     {
         self::$lastLifecycleRequest = $dto;
 
-        return new TenantLifecycleResponseDTO($appKey, $dto->projectCode, 'active', 'N');
+        return new TenantLifecycleResponseDTO($resolveKey, $dto->projectCode, 'active', 'N');
     }
 
-    public function exportTenant(string $appKey, TenantExportRequestDTO $dto): TenantExportResponseDTO
+    public function exportTenant(string $resolveKey, TenantExportRequestDTO $dto): TenantExportResponseDTO
     {
         self::$lastExportTenantRequest = $dto;
 
-        return new TenantExportResponseDTO($appKey, $dto->projectCode ?? '', 'exported', null, []);
+        return new TenantExportResponseDTO($resolveKey, $dto->projectCode ?? '', 'exported', null, []);
     }
 
-    public function importTenant(string $appKey, TenantImportRequestDTO $dto): TenantImportResponseDTO
+    public function importTenant(string $resolveKey, TenantImportRequestDTO $dto): TenantImportResponseDTO
     {
         self::$lastImportTenantRequest = $dto;
 
-        return new TenantImportResponseDTO($appKey, $dto->projectCode ?? '', 'imported', null, []);
+        return new TenantImportResponseDTO($resolveKey, $dto->projectCode ?? '', 'imported', null, []);
     }
 
-    public function searchImpersonableUsers(string $appKey, ImpersonableUserSearchRequestDTO $dto): ImpersonableUserSearchResponseDTO
+    public function searchImpersonableUsers(string $resolveKey, ImpersonableUserSearchRequestDTO $dto): ImpersonableUserSearchResponseDTO
     {
         self::$lastImpersonableUserSearchRequest = $dto;
 
         return new ImpersonableUserSearchResponseDTO(
-            appKey: $appKey,
+            resolveKey: $resolveKey,
             projectCode: $dto->projectCode,
             users: [
                 new ImpersonableUserListItemDTO(42, 'jgarcia', 'Juan Garcia'),
@@ -117,12 +117,12 @@ class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLif
         );
     }
 
-    public function impersonateUser(string $appKey, ImpersonationRequestDTO $dto): ImpersonationResponseDTO
+    public function impersonateUser(string $resolveKey, ImpersonationRequestDTO $dto): ImpersonationResponseDTO
     {
         self::$lastImpersonationRequest = $dto;
 
         return new ImpersonationResponseDTO(
-            appKey: $appKey,
+            resolveKey: $resolveKey,
             projectCode: $dto->projectCode,
             status: 'impersonation_ready',
             accessUrl: '/support/enter/fake-token-123',
@@ -130,10 +130,10 @@ class FakeTenantAdapter implements TenantProvisioningAdapterInterface, TenantLif
         );
     }
 
-    private function extractAppKey(ProvisionPayloadDTO $dto): string
+    private function extractResolveKey(ProvisionPayloadDTO $dto): string
     {
-        $appKey = $dto->project->appKey;
+        $resolveKey = $dto->project->resolveKey;
 
-        return $appKey !== null && $appKey !== '' ? $appKey : 'fake-app-key';
+        return $resolveKey !== null && $resolveKey !== '' ? $resolveKey : 'fake-app-key';
     }
 }
