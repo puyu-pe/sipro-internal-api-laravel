@@ -54,6 +54,13 @@ class InternalV1EndpointsTest extends TestCase
         $this->assertNotSame(404, $response->getStatusCode());
     }
 
+    public function test_impersonable_user_search_route_is_loaded(): void
+    {
+        $response = $this->call('POST', '/internal/v1/tenants/appkey:impersonation-users/search', [], [], [], [], '{}');
+
+        $this->assertNotSame(404, $response->getStatusCode());
+    }
+
     public function test_reject_missing_hmac_headers(): void
     {
         $response = $this->call('POST', '/internal/v1/tenants', [], [], [], [], '{}');
@@ -114,6 +121,105 @@ class InternalV1EndpointsTest extends TestCase
         $first->assertStatus(200);
         $second->assertStatus(401);
         $this->assertStringContainsString('NONCE_REPLAY', $second->getContent());
+    }
+
+    public function test_search_endpoint_returns_validation_error_for_invalid_pagination(): void
+    {
+        $rawBody = json_encode([
+            'appKey' => 'appkey-11111111-1111-4111-8111-111111111111',
+            'projectCode' => 'pbuds00047',
+            'page' => 0,
+            'perPage' => 51,
+        ]);
+        $headers = $this->signedHeaders(
+            'POST',
+            '/internal/v1/tenants/appkey:impersonation-users/search',
+            $rawBody,
+            (string) time(),
+            'nonce-search-validation'
+        );
+
+        $response = $this->callRaw('POST', '/internal/v1/tenants/appkey:impersonation-users/search', $rawBody, $headers);
+
+        $response->assertStatus(400);
+        $response->assertJsonPath('code', 'VALIDATION_ERROR');
+        $response->assertJsonPath('details.errors.0.field', 'page');
+    }
+
+    public function test_search_endpoint_returns_paginated_user_payload(): void
+    {
+        FakeTenantAdapter::$lastImpersonableUserSearchRequest = null;
+
+        $rawBody = json_encode([
+            'appKey' => 'appkey-11111111-1111-4111-8111-111111111111',
+            'projectCode' => 'pbuds00047',
+            'query' => 'juan',
+            'page' => 1,
+            'perPage' => 20,
+        ]);
+        $headers = $this->signedHeaders(
+            'POST',
+            '/internal/v1/tenants/appkey:impersonation-users/search',
+            $rawBody,
+            (string) time(),
+            'nonce-search-ok'
+        );
+
+        $response = $this->callRaw('POST', '/internal/v1/tenants/appkey:impersonation-users/search', $rawBody, $headers);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('ok', true);
+        $response->assertJsonPath('users.0.id', 42);
+        $response->assertJsonPath('pagination.perPage', 20);
+        self::assertSame('juan', FakeTenantAdapter::$lastImpersonableUserSearchRequest?->query);
+    }
+
+    public function test_impersonate_endpoint_validates_duration_policy(): void
+    {
+        $rawBody = json_encode([
+            'appKey' => 'appkey-11111111-1111-4111-8111-111111111111',
+            'projectCode' => 'pbuds00047',
+            'targetUserId' => 42,
+            'durationMinutes' => 61,
+        ]);
+        $headers = $this->signedHeaders(
+            'POST',
+            '/internal/v1/tenants/appkey:impersonate',
+            $rawBody,
+            (string) time(),
+            'nonce-impersonate-validation'
+        );
+
+        $response = $this->callRaw('POST', '/internal/v1/tenants/appkey:impersonate', $rawBody, $headers);
+
+        $response->assertStatus(400);
+        $response->assertJsonPath('code', 'VALIDATION_ERROR');
+        $response->assertJsonPath('details.errors.0.field', 'durationMinutes');
+    }
+
+    public function test_impersonate_endpoint_returns_effective_duration_metadata(): void
+    {
+        FakeTenantAdapter::$lastImpersonationRequest = null;
+
+        $rawBody = json_encode([
+            'appKey' => 'appkey-11111111-1111-4111-8111-111111111111',
+            'projectCode' => 'pbuds00047',
+            'targetUserId' => 42,
+            'durationMinutes' => 30,
+        ]);
+        $headers = $this->signedHeaders(
+            'POST',
+            '/internal/v1/tenants/appkey:impersonate',
+            $rawBody,
+            (string) time(),
+            'nonce-impersonate-ok'
+        );
+
+        $response = $this->callRaw('POST', '/internal/v1/tenants/appkey:impersonate', $rawBody, $headers);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('effectiveDurationMinutes', 30);
+        self::assertSame(30, FakeTenantAdapter::$lastImpersonationRequest?->durationMinutes);
     }
 
     /**

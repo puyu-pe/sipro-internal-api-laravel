@@ -11,8 +11,11 @@ use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantCloneAdapterInterface;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantImpersonationAdapterInterface;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantLifecycleAdapterInterface;
 use PuyuPe\SiproInternalApiCore\Contracts\Adapter\TenantProvisioningAdapterInterface;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonableUserSearchRequestDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonableUserSearchResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonationRequestDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ImpersonationResponseDTO;
+use PuyuPe\SiproInternalApiCore\Contracts\Validation\ValidationResult;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionPayloadDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\ProvisionResponseDTO;
 use PuyuPe\SiproInternalApiCore\Contracts\Dto\TenantExportRequestDTO;
@@ -225,6 +228,30 @@ class InternalV1Controller
         ], 200);
     }
 
+    public function searchImpersonableUsers(string $appKey, Request $request): JsonResponse
+    {
+        $dto = $this->buildValidatedDto(ImpersonableUserSearchRequestDTO::class, $request);
+
+        if ($dto instanceof JsonResponse) {
+            return $dto;
+        }
+
+        try {
+            $result = $this->impersonationAdapter()->searchImpersonableUsers($appKey, $dto);
+        } catch (TenantAdapterException $exception) {
+            return $this->adapterExceptionResponse($exception);
+        } catch (Throwable $exception) {
+            return $this->provisionFailedResponse($exception);
+        }
+
+        $payload = $result instanceof ImpersonableUserSearchResponseDTO ? $result->toArray() : [];
+
+        return response()->json([
+            'ok' => true,
+            ...$payload,
+        ], 200);
+    }
+
     public function impersonateUser(string $appKey, Request $request): JsonResponse
     {
         $dto = $this->buildValidatedDto(ImpersonationRequestDTO::class, $request);
@@ -255,13 +282,12 @@ class InternalV1Controller
             /** @var array<string,mixed> $payload */
             $payload = $request->json()->all();
             $dto = $dtoClass::fromArray($payload);
-            if (method_exists($dto, 'validate')) {
-                $validation = $dto->validate();
-                if (method_exists($validation, 'ok') && $validation->ok() === false) {
-                    $validationError = ErrorFactory::validationError($validation);
+            $validation = $this->dtoValidationResult($dto);
 
-                    return response()->json(ErrorResponse::fromError($validationError)->toArray(), 400);
-                }
+            if ($validation !== null && $validation->ok() === false) {
+                $validationError = ErrorFactory::validationError($validation);
+
+                return response()->json(ErrorResponse::fromError($validationError)->toArray(), 400);
             }
 
             return $dto;
@@ -331,6 +357,7 @@ class InternalV1Controller
         $error = $exception->error();
 
         $status = match ($this->extractErrorCode($error)) {
+            ErrorCode::VALIDATION_ERROR => 400,
             ErrorCode::TENANT_NOT_FOUND => 404,
             ErrorCode::USER_NOT_FOUND => 404,
             ErrorCode::TENANT_ALREADY_EXISTS => 409,
@@ -369,5 +396,37 @@ class InternalV1Controller
         }
 
         return ErrorCode::PROVISION_FAILED;
+    }
+
+    private function dtoValidationResult(object $dto): ?ValidationResult
+    {
+        if ($dto instanceof ImpersonationRequestDTO) {
+            return $dto->validateDurationPolicy(
+                $this->minImpersonationDurationMinutes(),
+                $this->maxImpersonationDurationMinutes(),
+            );
+        }
+
+        if ($dto instanceof ImpersonableUserSearchRequestDTO) {
+            return $dto->validate();
+        }
+
+        if (method_exists($dto, 'validate')) {
+            $validation = $dto->validate();
+
+            return $validation instanceof ValidationResult ? $validation : null;
+        }
+
+        return null;
+    }
+
+    private function minImpersonationDurationMinutes(): int
+    {
+        return (int) config('sipro-internal-api-laravel.impersonation.duration.min_minutes', 5);
+    }
+
+    private function maxImpersonationDurationMinutes(): int
+    {
+        return (int) config('sipro-internal-api-laravel.impersonation.duration.max_minutes', 60);
     }
 }

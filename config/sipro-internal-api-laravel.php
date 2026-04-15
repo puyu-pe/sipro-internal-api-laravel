@@ -21,4 +21,12 @@ return [
         'clone_class' => env('SIPRO_INTERNAL_API_CLONE_ADAPTER_CLASS', env('SIPRO_INTERNAL_API_ADAPTER_CLASS')),
         'impersonation_class' => env('SIPRO_INTERNAL_API_IMPERSONATION_ADAPTER_CLASS', env('SIPRO_INTERNAL_API_ADAPTER_CLASS')),
     ],
+
+    'impersonation' => [
+        'duration' => [
+            'default_minutes' => (int) env('SIPRO_INTERNAL_API_IMPERSONATION_DURATION_DEFAULT_MINUTES', 5),
+            'min_minutes' => (int) env('SIPRO_INTERNAL_API_IMPERSONATION_DURATION_MIN_MINUTES', 5),
+            'max_minutes' => (int) env('SIPRO_INTERNAL_API_IMPERSONATION_DURATION_MAX_MINUTES', 60),
+        ],
+    ],
 ];

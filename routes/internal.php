@@ -17,5 +17,6 @@ Route::prefix('internal/v1')
         Route::post('/tenants/{appKey}:reopen', [InternalV1Controller::class, 'reopenTenant']);
         Route::post('/tenants/{appKey}:export', [InternalV1Controller::class, 'exportTenant']);
         Route::post('/tenants/{appKey}:import', [InternalV1Controller::class, 'importTenant']);
+        Route::post('/tenants/{appKey}:impersonation-users/search', [InternalV1Controller::class, 'searchImpersonableUsers']);
         Route::post('/tenants/{appKey}:impersonate', [InternalV1Controller::class, 'impersonateUser']);
     });
